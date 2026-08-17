@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -12,7 +12,6 @@ import ReactFlow, {
 import dagre from "dagre";
 import "reactflow/dist/style.css";
 
-// 1. Updated TypeScript interfaces
 interface Issue {
   type: string;
   description: string;
@@ -31,16 +30,26 @@ interface ArchEdge {
   label?: string;
 }
 
+interface Architecture {
+  nodes: ArchNode[];
+  edges: ArchEdge[];
+}
+
 interface AnalysisResult {
   summary: string;
-  architecture: {
-    nodes: ArchNode[];
-    edges: ArchEdge[];
-  };
+  architecture: Architecture;
   issues: Issue[];
 }
 
-// 2. Inicijalizacija Dagre grafa
+interface HistoryItem {
+  id: string;
+  summary: string;
+  createdAt: string;
+  code: string;
+  architecture: Architecture;
+  issues: Issue[];
+}
+
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 
@@ -70,7 +79,6 @@ const getLayoutedElements = (
     node.targetPosition = isHorizontal ? Position.Left : Position.Top;
     node.sourcePosition = isHorizontal ? Position.Right : Position.Bottom;
 
-    // Postavljanje izračunate pozicije
     node.position = {
       x: nodeWithPosition.x - nodeWidth / 2,
       y: nodeWithPosition.y - nodeHeight / 2,
@@ -87,10 +95,80 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState<HistoryItem[]>([]);
 
-  // State for React Flow
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await fetch("/api/review");
+      const data = await res.json();
+      if (data.success) {
+        setHistory(data.history);
+      }
+    } catch {
+      console.error("Could not load history");
+    }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadData = async () => {
+      try {
+        const res = await fetch("/api/review");
+        const data = await res.json();
+        if (data.success && isMounted) {
+          setHistory(data.history);
+        }
+      } catch {
+        console.error("Could not load history");
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const renderGraph = (arch: Architecture) => {
+    if (!arch || !arch.nodes) return;
+
+    const flowNodes: Node[] = arch.nodes.map((n) => ({
+      id: String(n.id),
+      position: { x: 0, y: 0 },
+      data: { label: `${n.label} (${n.type})` },
+      style: {
+        background: "#1e1e2f",
+        color: "#fff",
+        border: "1px solid #4f46e5",
+        borderRadius: "8px",
+        padding: "10px",
+        width: 180,
+        textAlign: "center",
+      },
+    }));
+
+    const flowEdges: Edge[] = (arch.edges || []).map((e, index) => ({
+      id: `e${e.source}-${e.target}-${index}`,
+      source: String(e.source),
+      target: String(e.target),
+      label: e.label,
+      animated: true,
+      style: { stroke: "#4f46e5", strokeWidth: 2 },
+    }));
+
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      flowNodes,
+      flowEdges,
+    );
+
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+  };
 
   const handleReview = async () => {
     setLoading(true);
@@ -107,46 +185,12 @@ export default function Home() {
       });
 
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.error || "Unsuccessful analysis.");
 
       const analysis: AnalysisResult = data.analysis;
       setResult(analysis);
-
-      if (analysis.architecture) {
-        const flowNodes: Node[] = analysis.architecture.nodes.map((n) => ({
-          id: String(n.id),
-          position: { x: 0, y: 0 }, // Dagre će prepisati ove nule
-          data: { label: `${n.label} (${n.type})` },
-          style: {
-            background: "#1e1e2f",
-            color: "#fff",
-            border: "1px solid #4f46e5",
-            borderRadius: "8px",
-            padding: "10px",
-            width: 180,
-            textAlign: "center",
-          },
-        }));
-
-        const flowEdges: Edge[] = analysis.architecture.edges.map(
-          (e, index) => ({
-            id: `e${e.source}-${e.target}-${index}`,
-            source: String(e.source),
-            target: String(e.target),
-            label: e.label,
-            animated: true,
-            style: { stroke: "#4f46e5", strokeWidth: 2 },
-          }),
-        );
-
-        // 3. Primjena Dagre algoritma prije postavljanja u state
-        const { nodes: layoutedNodes, edges: layoutedEdges } =
-          getLayoutedElements(flowNodes, flowEdges);
-
-        setNodes(layoutedNodes);
-        setEdges(layoutedEdges);
-      }
+      renderGraph(analysis.architecture);
+      fetchHistory(); // Osvježi povijest nakon novog unosa
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -158,22 +202,67 @@ export default function Home() {
     }
   };
 
+  // Učitavanje odabrane stavke iz povijesti
+  const loadFromHistory = (item: HistoryItem) => {
+    setCode(item.code);
+    setResult({
+      summary: item.summary,
+      architecture: item.architecture,
+      issues: item.issues,
+    });
+    renderGraph(item.architecture);
+  };
+
   return (
-    <main className="min-h-screen bg-gray-950 text-gray-100 p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Visual Code Reviewer
-        </h1>
-        <p className="text-gray-400">
-          Paste your code below and visualize the architecture using Qwen 2.5
-          and React Flow.
-        </p>
+    <main className="min-h-screen bg-gray-950 text-gray-100 p-6 flex flex-col md:flex-row gap-6">
+      {/* Sidebar s poviješću */}
+      <aside className="w-full md:w-72 bg-gray-900 border border-gray-800 rounded-lg p-4 flex flex-col h-fit md:h-[calc(100vh-3rem)]">
+        <h2 className="text-lg font-bold text-indigo-400 mb-3">
+          Review History
+        </h2>
+        <div className="space-y-2 overflow-y-auto pr-1 flex-1">
+          {history.length === 0 ? (
+            <p className="text-xs text-gray-500">No saved reviews yet.</p>
+          ) : (
+            history.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => loadFromHistory(item)}
+                className="w-full text-left p-2.5 rounded bg-gray-950/60 hover:bg-indigo-950/40 border border-gray-800 hover:border-indigo-700/50 transition cursor-pointer"
+              >
+                <p className="text-xs text-gray-400">
+                  {new Date(item.createdAt).toLocaleDateString()}{" "}
+                  {new Date(item.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+                <p className="text-xs text-gray-200 truncate mt-1">
+                  {item.summary}
+                </p>
+              </button>
+            ))
+          )}
+        </div>
+      </aside>
+
+      {/* Glavni sadržaj */}
+      <div className="flex-1 max-w-5xl space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Visual Code Reviewer
+          </h1>
+          <p className="text-gray-400">
+            Paste your code below and visualize the architecture using Qwen 2.5,
+            React Flow, and PostgreSQL.
+          </p>
+        </div>
 
         <div className="space-y-2">
           <textarea
-            rows={10}
+            rows={8}
             className="w-full p-4 bg-gray-900 border border-gray-800 rounded-lg font-mono text-sm focus:outline-none focus:border-indigo-500"
-            placeholder="Paste your code here..."
+            placeholder="Paste your JavaScript/TypeScript/Python code here..."
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
@@ -182,7 +271,7 @@ export default function Home() {
             disabled={loading || !code.trim()}
             className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-800 rounded-lg font-medium transition cursor-pointer"
           >
-            {loading ? "Analyzing architecture..." : "Start visual analysis"}
+            {loading ? "Analyzing & saving..." : "Start visual analysis"}
           </button>
         </div>
 
@@ -201,7 +290,7 @@ export default function Home() {
               <p className="text-gray-300">{result.summary}</p>
             </div>
 
-            <div className="h-125 w-full border border-gray-800 rounded-lg overflow-hidden bg-gray-950">
+            <div className="h-[480px] w-full border border-gray-800 rounded-lg overflow-hidden bg-gray-950">
               <ReactFlow nodes={nodes} edges={edges} fitView>
                 <Background color="#333" gap={16} />
                 <Controls />
