@@ -1,0 +1,25 @@
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      # Umjesto localhost, web kontejner gađa bazu po imenu "db" unutar Docker mreže
+      - DATABASE_URL=postgresql://postgres:0917@db:5432/postgres?schema=public
+      # host.docker.internal omogućava kontejneru da "vidi" Ollamu na tvom Windowsu
+      - OLLAMA_URL=http://host.docker.internal:11434
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_PASSWORD=0917
+    volumes:
+      # Ovo osigurava da podaci u bazi ostanu spašeni i kad se kontejner ugasi
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
