@@ -77,7 +77,7 @@ export default function Dashboard() {
             href="/"
             className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium transition border border-gray-700"
           >
-            ← Back to IDE
+            Back
           </Link>
         </div>
 
