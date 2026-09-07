@@ -1,8 +1,9 @@
 # Visual Code Reviewer - AI-Powered IDE
 
 This is a full-stack, Dockerized web application for static code analysis, built with **Next.js**, **React Flow**, **Prisma**, and **PostgreSQL**. It integrates a local large language model (**Qwen 2.5-Coder** via **Ollama**) to provide real-time architectural visualization, bug detection, and an interactive AI chat assistant.
-
+<br>
 ![Visual Code Reviewer IDE](./images/IDE.png)
+<br>
 
 ---
 
@@ -36,14 +37,20 @@ The application sends the raw code to the AI model with a strict system prompt d
 - Interactive **Monaco Code Editor** with TypeScript syntax highlighting and auto-clearing placeholders.
 
 - AI-generated **Architecture Graph** utilizing React Flow and Dagre, with the ability to export diagrams as high-resolution PNG images.
+  <br>
   ![Architecture Graph Export](./images/architecture_graph.png)
+  <br>
 - Advanced Code Review that detects and categorizes issues strictly into: _Security_, _Bug_, _Performance_, and _Style_.
 
 - Integrated **AI Chat Assistant** featuring real-time text streaming, Markdown rendering, syntax highlighting for code blocks, and a one-click copy function.
+  <br>
   ![AI Chat Assistant](./images/chat.png)
+  <br>
 
 - **Analytics Dashboard** built with Recharts to visualize code quality trends, issue proportions, and historical analysis data.
+  <br>
   ![Analytics Dashboard](./images/dashboard.png)
+  <br>
 - Robust error handling, including AbortControllers to prevent race conditions during chat streaming.
 - Fully containerized database and backend environment using Docker Compose.
 
