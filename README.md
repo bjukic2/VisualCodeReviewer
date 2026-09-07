@@ -35,18 +35,15 @@ The application sends the raw code to the AI model with a strict system prompt d
 
 - Interactive **Monaco Code Editor** with TypeScript syntax highlighting and auto-clearing placeholders.
 
-![Architecture Graph Export](./images/architecture_graph.png)
-
 - AI-generated **Architecture Graph** utilizing React Flow and Dagre, with the ability to export diagrams as high-resolution PNG images.
+  ![Architecture Graph Export](./images/architecture_graph.png)
 - Advanced Code Review that detects and categorizes issues strictly into: _Security_, _Bug_, _Performance_, and _Style_.
 
-![AI Chat Assistant](./images/chat.png)
-
 - Integrated **AI Chat Assistant** featuring real-time text streaming, Markdown rendering, syntax highlighting for code blocks, and a one-click copy function.
-
-![Analytics Dashboard](./images/dashboard.png)
+  ![AI Chat Assistant](./images/chat.png)
 
 - **Analytics Dashboard** built with Recharts to visualize code quality trends, issue proportions, and historical analysis data.
+  ![Analytics Dashboard](./images/dashboard.png)
 - Robust error handling, including AbortControllers to prevent race conditions during chat streaming.
 - Fully containerized database and backend environment using Docker Compose.
 
