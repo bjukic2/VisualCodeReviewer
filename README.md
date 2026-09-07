@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Visual Code Reviewer - AI-Powered IDE
 
-## Getting Started
+This is a full-stack, Dockerized web application for static code analysis, built with **Next.js**, **React Flow**, **Prisma**, and **PostgreSQL**. It integrates a local large language model (**Qwen 2.5-Coder** via **Ollama**) to provide real-time architectural visualization, bug detection, and an interactive AI chat assistant.
 
-First, run the development server:
+![Visual Code Reviewer IDE](./images/IDE.png)
+
+---
+
+## Tech Stack
+
+- **Framework**: Next.js (React)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Database**: PostgreSQL
+- **ORM**: [Prisma](https://www.prisma.io/)
+- **AI Engine**: Local Ollama (Qwen 2.5-Coder:7b)
+- **Key Libraries**: React Flow (Graph visualization), Monaco Editor (Code editor), Recharts (Dashboard analytics), Zod (Schema validation)
+- **DevOps**: Docker & Docker Compose
+
+---
+
+## Core Architecture
+
+### Why Local AI (Ollama)?
+
+Running the Qwen 2.5-Coder model locally via Ollama ensures absolute code privacy, zero API costs, and allows the backend to process potentially sensitive code offline. The backend utilizes Ollama's API with specific parameters (such as `num_predict`, `repeat_penalty`, and strict JSON formatting instructions) alongside an automated retry mechanism to prevent model hallucinations and ensure robust data parsing.
+
+### How is the Architecture Graph Generated?
+
+The application sends the raw code to the AI model with a strict system prompt demanding a structured JSON response. This response is strictly validated on the server using **Zod**. The model extracts functions, components, and dependencies as "nodes" and "edges". This data is then passed to `Dagre` for automatic, collision-free layout calculation, and rendered interactively on the frontend using `React Flow`.
+
+---
+
+## Features
+
+- Interactive **Monaco Code Editor** with TypeScript syntax highlighting and auto-clearing placeholders.
+
+![Architecture Graph Export](./images/architecture_graph.png)
+
+- AI-generated **Architecture Graph** utilizing React Flow and Dagre, with the ability to export diagrams as high-resolution PNG images.
+- Advanced Code Review that detects and categorizes issues strictly into: _Security_, _Bug_, _Performance_, and _Style_.
+
+![AI Chat Assistant](./images/chat.png)
+
+- Integrated **AI Chat Assistant** featuring real-time text streaming, Markdown rendering, syntax highlighting for code blocks, and a one-click copy function.
+
+![Analytics Dashboard](./images/dashboard.png)
+
+- **Analytics Dashboard** built with Recharts to visualize code quality trends, issue proportions, and historical analysis data.
+- Robust error handling, including AbortControllers to prevent race conditions during chat streaming.
+- Fully containerized database and backend environment using Docker Compose.
+
+---
+
+## Getting started
+
+### 1. Clone the repo
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone [https://github.com/bjukic2/VisualCodeReviewer.git](https://github.com/bjukic2/VisualCodeReviewer.git)
+cd VisualCodeReviewer
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Set up Local AI
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Make sure you have [Ollama](https://ollama.com/) installed and running on your host machine. Download and initialize the required Qwen model:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+ollama run qwen2.5-coder:7b
+```
 
-## Learn More
+### 3. Run the application
 
-To learn more about Next.js, take a look at the following resources:
+The Next.js application and the PostgreSQL database are fully containerized. You do not need to manually install Node.js or Postgres. Simply build and start the containers using Docker Compose:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+docker compose up --build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+> **Note:** Once the build process is complete, the application will be available at `http://localhost:3000`. The Docker container is pre-configured to communicate with the host machine's Ollama instance. The PostgreSQL schema is automatically pushed during the build process.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Author
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Made by **Bruno Jukić**  
+[https://github.com/bjukic2](https://github.com/bjukic2)
